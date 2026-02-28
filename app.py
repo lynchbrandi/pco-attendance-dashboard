@@ -8,7 +8,6 @@ APP_ID = st.secrets["PCO_APP_ID"]
 SECRET = st.secrets["PCO_SECRET"]
 
 
-
 st.title("Attendance Dashboard")
 
 
@@ -83,3 +82,4 @@ if not df.empty:
     st.dataframe(df.sort_values("Starts At"), use_container_width=True)
 else:
     st.info("No event times found for today (or check-ins haven’t started yet).")
+
