@@ -4,6 +4,8 @@ import pandas as pd
 from datetime import datetime, timedelta, time
 from zoneinfo import ZoneInfo
 
+APP_ID = st.secrets["PCO_APP_ID"]
+SECRET = st.secrets["PCO_SECRET"]
 
 
 
