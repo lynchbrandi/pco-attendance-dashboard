@@ -31,6 +31,7 @@ end_utc = end_local.astimezone(ZoneInfo("UTC"))
 params = {
     "where[starts_at][gte]": start_utc.isoformat().replace("+00:00", "Z"),
     "where[starts_at][lt]": end_utc.isoformat().replace("+00:00", "Z"),
+    "include": "event",
 }
 
 event_times_response = requests.get(
@@ -45,29 +46,42 @@ if event_times_response.status_code != 200:
     st.error(event_times_response.text)
     st.stop()
 
-event_times = event_times_response.json().get("data", [])
+payload = event_times_response.json()
+event_times = payload.get("data", [])
+included = payload.get("included", [])
+
+# Build lookup: event_id -> event_name (e.g., "Sunday Worship")
+event_name_by_id = {}
+for item in included:
+    if (item.get("type") or "").lower() == "event":
+        event_name_by_id[item["id"]] = item.get("attributes", {}).get("name", "Sunday Worship")
+
 st.write("event_times returned:", len(event_times))
 
 # ✅ Filter to TODAY in Chicago (in case API filter returns extra)
 attendance_data = []
+
 for event in event_times:
     attrs = event.get("attributes", {})
     starts_at_str = attrs.get("starts_at")
+
     if not starts_at_str:
         continue
 
-    # Convert Planning Center UTC time to Chicago time
     starts_at_utc = datetime.fromisoformat(starts_at_str.replace("Z", "+00:00"))
     starts_at_chicago = starts_at_utc.astimezone(chicago)
 
-    # Keep only today's events (Chicago date)
     if starts_at_chicago.date() != today_date:
         continue
 
-    service_name = attrs.get("name") or "Service"
+    # Get parent Event ID
+    event_id = event.get("relationships", {}).get("event", {}).get("data", {}).get("id")
+
+    # Get Event name (e.g. Sunday Worship)
+    event_name = event_name_by_id.get(event_id, "Sunday Worship")
 
     attendance_data.append({
-        "Service": service_name,
+        "Event": event_name,
         "Starts At": starts_at_chicago.strftime("%I:%M %p"),
         "Total Check-ins": attrs.get("total_count", 0),
         "Regular": attrs.get("regular_count", 0),
@@ -82,4 +96,3 @@ if not df.empty:
     st.dataframe(df.sort_values("Starts At"), use_container_width=True)
 else:
     st.info("No event times found for today (or check-ins haven’t started yet).")
-
