@@ -3,6 +3,10 @@ import requests
 import pandas as pd
 from datetime import datetime, timedelta, time
 from zoneinfo import ZoneInfo
+from streamlit_autorefresh import st_autorefresh
+
+# Refresh every 30 seconds (60,000 ms)
+st_autorefresh(interval=30000, key="pco_refresh")
 
 APP_ID = st.secrets["PCO_APP_ID"]
 SECRET = st.secrets["PCO_SECRET"]
@@ -27,7 +31,7 @@ start_local = datetime.combine(today_date, time(0, 0), tzinfo=chicago)
 end_local = start_local + timedelta(days=1)
 start_utc = start_local.astimezone(ZoneInfo("UTC"))
 end_utc = end_local.astimezone(ZoneInfo("UTC"))
-
+st.caption(f"Last updated: {datetime.now(chicago).strftime('%I:%M:%S %p')} (Chicago)")
 params = {
     "where[starts_at][gte]": start_utc.isoformat().replace("+00:00", "Z"),
     "where[starts_at][lt]": end_utc.isoformat().replace("+00:00", "Z"),
@@ -96,3 +100,4 @@ if not df.empty:
     st.dataframe(df.sort_values("Starts At"), use_container_width=True)
 else:
     st.info("No event times found for today (or check-ins haven’t started yet).")
+
